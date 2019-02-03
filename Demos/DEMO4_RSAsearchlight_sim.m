@@ -92,23 +92,24 @@ rsa.fig.handleCurrentFigure([returnHere,filesep,'DEMO4',filesep,'SLsimulationSet
 % prepare the rMaps:
 for subjectI = 1:Nsubjects
     load([userOptions.rootPath,filesep,'Maps',filesep,'rs_subject',num2str(subjectI),'.mat']);
-    rMaps{subjectI} = rs;
+    rMaps{subjectI} = rsa.stat.fisherTransform(rs);
     fprintf(['loading the correlation maps for subject %d \n'],subjectI);
 end
+mask = m;
 % concatenate across subjects
 for modelI = 1:numel(models)
     for subI = 1:Nsubjects
         thisRs = rMaps{subI};
         thisModelSims(:,:,:,subI) = thisRs(:,:,:,modelI);
     end
-    % obtain a pMaps from applying a 1-sided signrank test and also t-test to
+    % obtain a pMaps from applying a 1-sided signrank test (p1) and also t-test (p2)to
     % the model similarities:
     for x=1:size(thisModelSims,1)
         for y=1:size(thisModelSims,2)
             for z=1:size(thisModelSims,3)
                 if mask(x,y,z) == 1
                     [h p1(x,y,z)] = ttest(squeeze(thisModelSims(x,y,z,:)),0,0.05,'right');
-                    [p2(x,y,z)] = rsa.util.signrank_onesided(squeeze(thisModelSims(x,y,z,:)));
+                    [p2(x,y,z)] = rsa.stat.signrank_onesided(squeeze(thisModelSims(x,y,z,:)));
                 else
                     p1(x,y,z) = NaN;
                     p2(x,y,z) = NaN;
@@ -128,8 +129,8 @@ for modelI = 1:numel(models)
     supraThreshMarked_sr(p2 <= pThrsh_sr) = 1;
     
     % display the location where the effect was inserted (in green):
-    brainVol = rsa.gmri.addRoiToVol(map2vol(anatVol),mask2roi(mask),[1 0 0],2);
-    brainVol_effectLoc = rsa.gmri.addBinaryMapToVol(brainVol,Mask.*mask,[0 1 0]);
+    brainVol = rsa.fmri.addRoiToVol(map2vol(anatVol),mask2roi(mask),[1 0 0],2);
+    brainVol_effectLoc = rsa.fmri.addBinaryMapToVol(brainVol,Mask.*mask,[0 1 0]);
     rsa.fig.showVol(brainVol_effectLoc,'simulated effect [green]',2);
     rsa.fig.handleCurrentFigure([returnHere,filesep,'DEMO4',filesep,'results_DEMO4_simulatedEffectRegion'],userOptions);
     
@@ -144,6 +145,17 @@ for modelI = 1:numel(models)
     brainVol_t = rsa.fmri.addBinaryMapToVol(brainVol,supraThreshMarked_t.*mask,[1 1 0]);
     rsa.fig.showVol(brainVol_t,'t-test, E(FDR) < .05',4)
     rsa.fig.handleCurrentFigure([returnHere,filesep,'DEMO4',filesep,'results_DEMO2_tTest'],userOptions);
+    
+    % run the inference for TFCE
+    ps_tfce = matlab_tfce('onesample',1,thisModelSims,[],[],1000);
+    supraThreshMarked_tfce = zeros(size(ps_tfce));
+    supraThreshMarked_tfce(ps_tfce <= .05) = 1;
+    
+    brainVol = rsa.fmri.addRoiToVol(map2vol(anatVol),mask2roi(mask),[1 0 0],2);
+    brainVol_tfce = rsa.fmri.addBinaryMapToVol(brainVol,supraThreshMarked_tfce.*mask,[1 0 1]);
+    rsa.fig.showVol(brainVol_tfce,'TFCE:  FWE < .05',3)
+    rsa.fig.handleCurrentFigure([returnHere,filesep,'DEMO4',filesep,'results_DEMO2_TFCE'],userOptions);
+
 end
 
 cd(returnHere);
