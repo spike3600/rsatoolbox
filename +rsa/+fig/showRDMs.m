@@ -29,10 +29,11 @@ if ~exist('clims','var'), clims=[]; end
 if ~exist('rankTransform01','var'), rankTransform01=true; clims=[0 1]; end
 if ~exist('showColorbar','var'), showColorbar=true; end
 if ~exist('aspect', 'var') || isempty(aspect), aspect = 2/3; end
+if ~exist('colourScheme','var') || isempty(colourScheme), colourScheme = RDMcolormap; end
+
 
 %% handle RDM types
 
-colourScheme = RDMcolormap;
 if isstruct(RDMs)
 	[rawRDMs nRDMs] = unwrapRDMs(RDMs);
 else
@@ -147,7 +148,7 @@ for RDMi=1:nRDMs
 	
 	% If image labels, add them
 	if exist('imagelabels','var') && ~isempty(imagelabels)
-		addImageSequenceToAxes(gca,imagelabels);
+		rsa.fig.addImageSequenceToAxes(gca,imagelabels);
 	end
 	
 end
